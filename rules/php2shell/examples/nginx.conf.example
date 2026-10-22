@@ -1,0 +1,8 @@
+# Exemplo para Nginx compilado com conector ModSecurity v3
+# NAO substitua sua configuracao nginx inteira por este trecho
+# Em um contexto server/location existente:
+#   modsecurity on;
+#   modsecurity_rules_file /etc/nginx/modsec/main.conf;
+# O arquivo main.conf deve carregar a configuracao principal e incluir:
+#   Include /etc/nginx/modsec/modsecurity-php2shell.conf
+# Garanta SecRuleEngine On na configuracao efetiva

@@ -1,0 +1,5 @@
+# Exemplo Apache com ModSecurity carregado:
+# IncludeOptional /etc/modsecurity/modsecurity-php2shell.conf
+# No WHM/cPanel, prefira ModSecurity Tools > Rules List > Add Rule
+# e nao edite diretamente arquivos gerados pelo cPanel.
+# SecRuleEngine On deve estar habilitado para efetuar bloqueios.
