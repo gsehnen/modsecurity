@@ -38,8 +38,8 @@ Para evitar colisão entre regras deste repositório, cada regra reserva uma fai
 
 | Faixa | Regra |
 | --- | --- |
-| `1005000`–`1005099` | php2shell |
-| `1005100`–`1005199` | (livre) |
+| `1005000`-`1005099` | php2shell |
+| `1005100`-`1005199` | (livre) |
 
 Confirme sempre que a faixa está livre **no seu ambiente** antes de aplicar.
 

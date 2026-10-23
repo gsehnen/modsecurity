@@ -1,6 +1,6 @@
-# php2shell — mitigação ModSecurity (CVE-2026-109619 e CVE-2026-115560)
+# php2shell - mitigação ModSecurity (CVE-2026-109619 e CVE-2026-115560)
 
-Regra defensiva de **ModSecurity** para bloquear requisições com o parâmetro `PHP_SESSION_UPLOAD_PROGRESS`, empregado em uma técnica pública relacionada às falhas de progresso de upload do PHP — **CVE-2026-109618**, **CVE-2026-109619** e **CVE-2026-115560** — para **Apache** e **Nginx + libModSecurity v3**.
+Regra defensiva de **ModSecurity** para bloquear requisições com o parâmetro `PHP_SESSION_UPLOAD_PROGRESS`, empregado em uma técnica pública relacionada às falhas de progresso de upload do PHP **CVE-2026-109618**, **CVE-2026-109619** e **CVE-2026-115560** para **Apache** e **Nginx + libModSecurity v3**.
 
 > **Atenção:** a regra não corrige o PHP, não detecta todas as formas de exploração, e não é prova de que um site esteja seguro. A medida essencial é atualizar o PHP para uma versão corrigida (ou pacote equivalente com correção). Pode haver falsos positivos em aplicações que realmente utilizam o campo de progresso de upload.
 
@@ -8,14 +8,14 @@ Regra defensiva de **ModSecurity** para bloquear requisições com o parâmetro 
 
 São **três** CVEs no mesmo componente. Esta regra atua no vetor de progresso de upload (o campo `PHP_SESSION_UPLOAD_PROGRESS`), que é o ponto de entrada compartilhado por **duas** delas: **CVE-2026-109619** e **CVE-2026-115560**.
 
-A **CVE-2026-109618** (corrupção de memória no tratamento de *out-of-memory*) **não é coberta por nenhuma regra de WAF** - não depende do campo `PHP_SESSION_UPLOAD_PROGRESS` nem de assinatura observável no corpo. Isso está confirmado também pelos fornecedores de regras comerciais. **Não confie no WAF para a CVE-2026-109618.**
+A **CVE-2026-109618** (corrupção de memória no tratamento de *out-of-memory*) **não é coberta por nenhuma regra de WAF**, não depende do campo `PHP_SESSION_UPLOAD_PROGRESS` nem de assinatura observável no corpo. Isso está confirmado também pelos fornecedores de regras comerciais. **Não confie no WAF para a CVE-2026-109618.**
 
 ##  Correção e mitigação rápidas (até atualizar o PHP)
 
 O WAF é **defesa em profundidade**, não a correção. Em ordem de prioridade:
 
 **1. Atualize o PHP.** Versões corrigidas da 109618/109619 (21/10/2026):
-**8.2.35**, **8.3.36**, **8.4.27** ou **8.5.12**. Para 8.1 e anteriores, use o backport do seu fornecedor (distribuição/cPanel/EasyApache). A **CVE-2026-115560** foi divulgada em 23/10/2026 e será corrigida no próximo bugfix — até lá, aplique o passo 2.
+**8.2.35**, **8.3.36**, **8.4.27** ou **8.5.12**. Para 8.1 e anteriores, use o backport do seu fornecedor (distribuição/cPanel/EasyApache). A **CVE-2026-115560** foi divulgada em 23/10/2026 e será corrigida no próximo bugfix, até lá, aplique o passo 2.
 
 **2. Enquanto não atualiza - mitigação oficial (cobre CVE-2026-109619 e CVE-2026-115560).** Desligue o progresso de upload no `php.ini` ou no pool do PHP-FPM (não via `ini_set()` nem `.user.ini`) e reinicie os workers:
 
