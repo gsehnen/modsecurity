@@ -1,12 +1,12 @@
-# php2shell — mitigação ModSecurity (CVE-2026-109619)
+# php2shell — mitigação ModSecurity (CVE-2026-109619 e CVE-2026-115560)
 
-Regra defensiva de **ModSecurity** para bloquear requisições com o parâmetro `PHP_SESSION_UPLOAD_PROGRESS`, empregado em uma técnica pública relacionada a **CVE-2026-109618** e **CVE-2026-109619** para **Apache** e **Nginx + libModSecurity v3**.
+Regra defensiva de **ModSecurity** para bloquear requisições com o parâmetro `PHP_SESSION_UPLOAD_PROGRESS`, empregado em uma técnica pública relacionada às falhas de progresso de upload do PHP — **CVE-2026-109618**, **CVE-2026-109619** e **CVE-2026-115560** — para **Apache** e **Nginx + libModSecurity v3**.
 
 > **Atenção:** a regra não corrige o PHP, não detecta todas as formas de exploração, e não é prova de que um site esteja seguro. A medida essencial é atualizar o PHP para uma versão corrigida (ou pacote equivalente com correção). Pode haver falsos positivos em aplicações que realmente utilizam o campo de progresso de upload.
 
 ## O que esta regra NÃO cobre
 
-Há **duas** CVEs. Esta regra atua **somente** no vetor de progresso de upload, que é o da **CVE-2026-109619**.
+São **três** CVEs no mesmo componente. Esta regra atua no vetor de progresso de upload (o campo `PHP_SESSION_UPLOAD_PROGRESS`), que é o ponto de entrada compartilhado por **duas** delas: **CVE-2026-109619** e **CVE-2026-115560**.
 
 A **CVE-2026-109618** (corrupção de memória no tratamento de *out-of-memory*) **não é coberta por nenhuma regra de WAF** - não depende do campo `PHP_SESSION_UPLOAD_PROGRESS` nem de assinatura observável no corpo. Isso está confirmado também pelos fornecedores de regras comerciais. **Não confie no WAF para a CVE-2026-109618.**
 
@@ -14,10 +14,10 @@ A **CVE-2026-109618** (corrupção de memória no tratamento de *out-of-memory*)
 
 O WAF é **defesa em profundidade**, não a correção. Em ordem de prioridade:
 
-**1. Atualize o PHP** (correção real das duas CVEs). Versões corrigidas (21/10/2026):
-**8.2.35**, **8.3.36**, **8.4.27** ou **8.5.12**. Para 8.1 e anteriores, use o backport do seu fornecedor (distribuição/cPanel/EasyApache).
+**1. Atualize o PHP.** Versões corrigidas da 109618/109619 (21/10/2026):
+**8.2.35**, **8.3.36**, **8.4.27** ou **8.5.12**. Para 8.1 e anteriores, use o backport do seu fornecedor (distribuição/cPanel/EasyApache). A **CVE-2026-115560** foi divulgada em 23/10/2026 e será corrigida no próximo bugfix — até lá, aplique o passo 2.
 
-**2. Enquanto não atualiza - mitigação oficial da CVE-2026-109619.** Desligue o progresso de upload no `php.ini` ou no pool do PHP-FPM (não via `ini_set()` nem `.user.ini`) e reinicie os workers:
+**2. Enquanto não atualiza - mitigação oficial (cobre CVE-2026-109619 e CVE-2026-115560).** Desligue o progresso de upload no `php.ini` ou no pool do PHP-FPM (não via `ini_set()` nem `.user.ini`) e reinicie os workers:
 
 ```ini
 ; php.ini ou pool do PHP-FPM (ex.: /etc/php/8.3/fpm/pool.d/www.conf -> php_admin_value)
@@ -56,6 +56,7 @@ Além disso, use limites de cgroup/container como barreira de disponibilidade e,
 
 - **CVE-2026-109618:** no tratamento de falta de memória (*out-of-memory/OOM*), a requisição pode ficar com dados internos parcialmente inicializados e a rotina de limpeza pode tratar esses dados inválidos como válidos, podendo resultar em corrupção de memória e execução remota de código. **(Esta regra não cobre.)**
 - **CVE-2026-109619:** estado interno de uma requisição pode continuar apontando para memória já liberada; uma requisição posterior processada pelo mesmo worker pode acessar esse estado antigo, com risco de execução remota de código. **(Alvo desta regra, pelo caminho de progresso de upload.)**
+- **CVE-2026-115560:** falha divulgada em 23/10/2026 no mesmo mecanismo de progresso de upload. Só é explorável numa combinação incomum (`session.serialize_handler` em `php_binary`/`php_serialize` e troca para `php` via `ini_set()` antes do `session_start()`, com progresso de upload ativo). Ainda sem patch; mitigação é desligar o progresso de upload. **(Mesmo ponto de entrada desta regra.)**
 
 A regra aqui publicada **não corrige esses erros internos do PHP**. Atua apenas em uma possível entrada do ataque observada em demonstrações públicas.
 
@@ -70,7 +71,7 @@ SecRule ARGS_NAMES "@streq PHP_SESSION_UPLOAD_PROGRESS" \
     "id:1005001,phase:2,t:none,deny,status:403,log,\
     msg:'PHP2Shell: parametro PHP_SESSION_UPLOAD_PROGRESS bloqueado',\
     severity:'CRITICAL',\
-    tag:'PHP2Shell',tag:'CVE-2026-109619'"
+    tag:'PHP2Shell',tag:'CVE-2026-109619',tag:'CVE-2026-115560'"
 ```
 
 As demais regras fecham formas de contornar a assinatura simples:
@@ -160,16 +161,17 @@ As regras foram testadas em contêineres com as duas pilhas: **Apache + ModSecur
 ## Limitações e operações
 
 - Atualizar PHP é indispensável: WAF é **defesa em profundidade**.
-- A regra cobre o caminho de progresso de upload (CVE-2026-109619), **não** o caminho de falta de memória da CVE-2026-109618.
+- A regra cobre o caminho de progresso de upload (CVE-2026-109619 e CVE-2026-115560), **não** o caminho de falta de memória da CVE-2026-109618.
 - `SecRuleEngine DetectionOnly` apenas registra, sem aplicar `deny` - use-o para validar antes de ativar o bloqueio.
 - A detecção depende da configuração e do parser de corpo da requisição do ModSecurity.
 - Pode causar falsos positivos com clientes que utilizem o progresso de upload da sessão PHP, e a regra 1005003 pode ser sensível a multipart gerado por clientes antigos.
-- A regra não identifica nem mitiga todos os vetores das duas CVEs.
+- A regra não identifica nem mitiga todos os vetores das três CVEs.
 - Teste em homologação e acompanhe os logs antes da distribuição global.
 
 ## Referências
 
 - PHP Security Advisory (21/10/2026): https://www.php.net/archive/2026.php
+- CVE-2026-115560 (23/10/2026): https://securityonline.info/php-session-vulnerability-cve-2026-115560/
 - cPanel / EasyApache: https://support.cpanel.net/hc/en-us/articles/44397389677335-Critical-PHP-Security-Release-CVE-2026-109618-and-CVE-2026-109619
 - Nginx + libModSecurity v3: https://modsecurity.org/docs/2-installation/2-2-libmodsecurity-v3-nginx/
 - UK NCSC: https://www.ncsc.gov.uk/news/critical-security-issue-affecting-php

@@ -8,9 +8,9 @@ Coleção de regras defensivas de **ModSecurity**, cada uma autossuficiente na s
 
 | Regra | Alvo | Faixa de IDs | Status |
 | --- | --- | --- | --- |
-| [`php2shell`](rules/php2shell/) | CVE-2026-109619 (PHP `session.upload_progress`) | `1005001`–`1005005` | Testada em Apache v2 e Nginx v3 |
+| [`php2shell`](rules/php2shell/) | CVE-2026-109619 e CVE-2026-115560 (PHP `session.upload_progress`) | `1005001`–`1005005` | Testada em Apache v2 e Nginx v3 |
 
-> A técnica **php2shell** envolve duas CVEs: **CVE-2026-109619** (progresso de upload, coberta por esta regra) e **CVE-2026-109618** (corrupção de memória por *out-of-memory*, **não coberta por nenhuma regra de WAF**). Para a 109618, a única proteção é atualizar o PHP e ajustar a configuração, detalhes no [README da regra](rules/php2shell/).
+> As falhas no progresso de upload do PHP envolvem três CVEs. Esta regra cobre o mesmo ponto de entrada (campo `PHP_SESSION_UPLOAD_PROGRESS`) de **duas**: **CVE-2026-109619** e **CVE-2026-115560**. A **CVE-2026-109618** (corrupção de memória por *out-of-memory*) **não é coberta por nenhuma regra de WAF**. Em todos os casos, a proteção real é atualizar o PHP e/ou desligar o progresso de upload, detalhes no [README da regra](rules/php2shell/).
 
 > Cada regra tem seu próprio `README.md` com instalação, teste e limitações.
 
